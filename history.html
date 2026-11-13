@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Riwayat - Skip URL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main class="wrap">
+  <div class="top">
+    <a class="logo" href="index.html"><i><svg viewBox="0 0 24 24"><path d="M5 5l7 7-7 7"/><path d="M13 5l7 7-7 7"/></svg></i>Skip URL</a>
+    <nav aria-label="Navigasi utama">
+      <a href="index.html">Skip</a>
+      <a href="domains.html">Domain</a>
+      <a href="history.html" aria-current="page">Riwayat</a>
+    </nav>
+  </div>
+
+  <header class="hero">
+    <h1 class="small">Riwayat skip</h1>
+    <p class="sub">Daftar link yang pernah Anda skip. Data tersimpan di browser ini saja.</p>
+  </header>
+
+  <div class="search">
+    <div class="box">
+      <input type="search" id="search" placeholder="Cari di riwayat" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Cari di riwayat">
+    </div>
+  </div>
+
+  <div class="tabs" role="group" aria-label="Filter riwayat">
+    <button type="button" data-filter="all" aria-pressed="true">Semua</button>
+    <button type="button" data-filter="ok" aria-pressed="false">Berhasil</button>
+    <button type="button" data-filter="fail" aria-pressed="false">Gagal</button>
+  </div>
+
+  <div class="meta">
+    <span id="summary"></span>
+    <button type="button" class="linkbtn" id="clear" hidden>Hapus semua</button>
+  </div>
+
+  <div id="list"></div>
+</main>
+
+<script src="js/services.js"></script>
+<script src="js/common.js"></script>
+<script src="js/history.js"></script>
+</body>
+</html>
