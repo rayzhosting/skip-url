@@ -81,7 +81,7 @@
   }
 
   async function copyText(text, btn, idle) {
-    try { await navigator.clipboard.writeText(text); btn.textContent = "Tersalin"; }
+    try { await navigator.clipboard.writeText(text); btn.textContent = "Tersalin"; if (window.Sfx) window.Sfx.play("pop"); }
     catch (e) { btn.textContent = "Gagal menyalin"; }
     setTimeout(function () { btn.textContent = idle; }, 1600);
   }

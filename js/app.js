@@ -7,12 +7,24 @@
 
   const input = $("url"), go = $("go"), box = $("box"), detectEl = $("detect"), out = $("out");
   let manualEndpoint = "";
+  let lastDetected = "";
+
+  function fx(name) { if (window.Sfx) window.Sfx.play(name); }
+  function pulse(cls) {
+    box.classList.remove("flash", "shake");
+    void box.offsetWidth;
+    box.classList.add(cls);
+    setTimeout(function () { box.classList.remove(cls); }, 1000);
+  }
 
   /* ---------- Tampilan deteksi ---------- */
   function renderDetect() {
     const url = C.extractUrl(input.value);
     const host = C.hostOf(url);
     const found = C.matchServices(host);
+    const key = found.length ? found[0].endpoint : "";
+    if (key && key !== lastDetected) fx("detect");
+    lastDetected = key;
     detectEl.innerHTML = "";
     box.classList.remove("has-error");
 
@@ -87,7 +99,7 @@
   async function run() {
     const d = renderDetect();
     if (!input.value.trim()) {
-      showError("Link masih kosong", "Tempel link yang ingin dilewati, lalu tekan Skip link.");
+      showError("Link masih kosong", "Tempel link yang ingin dilewati, lalu tekan Bypass.");
       box.classList.add("has-error");
       return;
     }
@@ -114,6 +126,7 @@
         const r = await callEndpoint(endpoints[i], d.url);
         const svc = SERVICES.find(function (s) { return s.endpoint === r.endpoint; });
         C.addHistory({ url: d.url, host: C.hostOf(d.url), endpoint: r.endpoint, service: svc ? svc.name : r.endpoint, result: r.picked, ok: true });
+        r.original = d.url;
         showResult(r);
         done();
         return;
@@ -130,19 +143,26 @@
     done();
   }
 
-  function done() { go.disabled = false; go.textContent = "Skip link"; }
+  function done() { go.disabled = false; go.textContent = "Bypass"; }
 
   /* ---------- Render hasil ---------- */
   function showResult(r) {
+    fx("success"); pulse("flash");
     const svc = SERVICES.find(function (s) { return s.endpoint === r.endpoint; });
     const ok = C.isHttp(r.picked);
     const card = C.el("div", { class: "card" });
-    card.append(C.el("h2", { text: "Link tujuan" + (svc ? " dari " + svc.name : "") }));
+    card.append(C.el("h2", { text: "Hasil bypass" }));
+    if (svc) card.append(C.el("p", { class: "svc-name", text: "Lewat layanan " + svc.name }));
 
     const res = ok
       ? C.el("a", { class: "res", href: r.picked, target: "_blank", rel: "noopener noreferrer", text: r.picked })
       : C.el("div", { class: "res", text: r.picked });
-    card.append(res);
+    card.append(
+      C.el("div", { class: "lbl", text: "Link bypass" }),
+      res,
+      C.el("div", { class: "lbl", text: "Link asli" }),
+      C.el("div", { class: "orig", text: r.original || "" })
+    );
 
     const act = C.el("div", { class: "actions" });
     if (ok) act.append(C.el("a", { class: "ghost solid", href: r.picked, target: "_blank", rel: "noopener noreferrer", text: "Buka link" }));
@@ -161,6 +181,7 @@
   }
 
   function showError(title, msg, raw) {
+    fx("error"); pulse("shake");
     const card = C.el("div", { class: "card err" }, [
       C.el("h2", { text: title }),
       C.el("p", { class: "note", text: msg })

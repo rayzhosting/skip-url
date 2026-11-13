@@ -21,17 +21,12 @@
       C.el("span", { class: "when", text: C.timeAgo(item.time), title: new Date(item.time).toLocaleString("id-ID") })
     ]);
 
-    const src = C.el("div", { class: "h-line" }, [
-      C.el("span", { class: "h-label", text: "Asal" }),
-      C.el("span", { class: "h-text", text: item.url })
-    ]);
-
-    const body = [head, src];
+    const body = [head];
 
     if (item.ok) {
       const ok = C.isHttp(item.result);
       body.push(C.el("div", { class: "h-line" }, [
-        C.el("span", { class: "h-label", text: "Hasil" }),
+        C.el("span", { class: "h-label", text: "Bypass" }),
         ok
           ? C.el("a", { class: "h-text link", href: item.result, target: "_blank", rel: "noopener noreferrer", text: item.result })
           : C.el("span", { class: "h-text", text: item.result })
@@ -43,6 +38,11 @@
       ]));
     }
 
+    body.push(C.el("div", { class: "h-line" }, [
+      C.el("span", { class: "h-label", text: "Asli" }),
+      C.el("span", { class: "h-text muted", text: item.url })
+    ]));
+
     const act = C.el("div", { class: "actions" });
     if (item.ok) {
       const copy = C.el("button", { class: "ghost", type: "button", text: "Salin hasil" });
@@ -50,7 +50,7 @@
       act.append(copy);
     }
     act.append(
-      C.el("a", { class: "ghost", href: "index.html?url=" + encodeURIComponent(item.url), text: "Skip lagi" }),
+      C.el("a", { class: "ghost", href: "index.html?url=" + encodeURIComponent(item.url), text: "Bypass lagi" }),
       C.el("button", { class: "ghost", type: "button", text: "Hapus", onclick: function () {
         C.removeHistory(item.id); render();
       } })
@@ -72,8 +72,8 @@
       summary.textContent = "Belum ada riwayat";
       listEl.append(C.el("div", { class: "empty" }, [
         C.el("p", { text: "Riwayat masih kosong." }),
-        C.el("p", { class: "note", text: "Link yang Anda skip akan muncul di sini." }),
-        C.el("a", { class: "ghost solid", href: "index.html", text: "Skip link pertama" })
+        C.el("p", { class: "note", text: "Link yang Anda bypass akan muncul di sini." }),
+        C.el("a", { class: "ghost solid", href: "index.html", text: "Bypass link pertama" })
       ]));
       return;
     }
