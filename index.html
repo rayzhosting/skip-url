@@ -3,21 +3,24 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Skip URL</title>
+<title>Bypass link</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <main class="wrap">
   <div class="top">
     <a class="logo" href="index.html"><i><svg viewBox="0 0 24 24"><path d="M5 5l7 7-7 7"/><path d="M13 5l7 7-7 7"/></svg></i>Skip URL</a>
-    <nav aria-label="Navigasi utama">
-      <a href="index.html" aria-current="page">Skip</a>
-      <a href="domains.html">Domain</a>
-      <a href="history.html">Riwayat</a>
-    </nav>
+    <div class="tools">
+      <nav aria-label="Navigasi utama">
+        <a href="index.html" aria-current="page">Bypass</a>
+        <a href="domains.html">Domain</a>
+        <a href="history.html">Riwayat</a>
+      </nav>
+      <button type="button" class="sndbtn" id="sound" aria-pressed="true" aria-label="Matikan suara"></button>
+    </div>
   </div>
 
   <header class="hero">
@@ -25,10 +28,10 @@
     <p class="sub">Layanan dikenali otomatis dari alamat linknya, jadi Anda tidak perlu memilih apa pun.</p>
   </header>
 
-  <div class="box" id="box">
+  <div class="panel" id="box">
     <div class="field">
-      <input type="text" id="url" placeholder="Tempel link di sini" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Link yang ingin dilewati">
-      <button class="go" id="go" type="button">Skip link</button>
+      <input type="text" id="url" placeholder="Tempel link di sini" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Link yang ingin di-bypass">
+      <button class="go" id="go" type="button">Bypass</button>
     </div>
     <div class="detect" id="detect" aria-live="polite"></div>
   </div>
@@ -41,6 +44,7 @@
 <script src="js/config.js"></script>
 <script src="js/services.js"></script>
 <script src="js/common.js"></script>
+<script src="js/fx.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

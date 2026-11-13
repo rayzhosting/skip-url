@@ -6,23 +6,26 @@
 <title>Riwayat - Skip URL</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <main class="wrap">
   <div class="top">
     <a class="logo" href="index.html"><i><svg viewBox="0 0 24 24"><path d="M5 5l7 7-7 7"/><path d="M13 5l7 7-7 7"/></svg></i>Skip URL</a>
-    <nav aria-label="Navigasi utama">
-      <a href="index.html">Skip</a>
-      <a href="domains.html">Domain</a>
-      <a href="history.html" aria-current="page">Riwayat</a>
-    </nav>
+    <div class="tools">
+      <nav aria-label="Navigasi utama">
+        <a href="index.html">Bypass</a>
+        <a href="domains.html">Domain</a>
+        <a href="history.html" aria-current="page">Riwayat</a>
+      </nav>
+      <button type="button" class="sndbtn" id="sound" aria-pressed="true" aria-label="Matikan suara"></button>
+    </div>
   </div>
 
   <header class="hero">
-    <h1 class="small">Riwayat skip</h1>
-    <p class="sub">Daftar link yang pernah Anda skip. Data tersimpan di browser ini saja.</p>
+    <h1 class="small">Riwayat bypass</h1>
+    <p class="sub">Daftar link yang pernah Anda bypass. Data tersimpan di browser ini saja.</p>
   </header>
 
   <div class="search">
@@ -47,6 +50,7 @@
 
 <script src="js/services.js"></script>
 <script src="js/common.js"></script>
+<script src="js/fx.js"></script>
 <script src="js/history.js"></script>
 </body>
 </html>
