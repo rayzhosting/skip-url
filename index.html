@@ -2,7 +2,9 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<meta name="description" content="Skip URL: tempel link, layanan dikenali otomatis, langsung ke tujuan.">
 <title>Bypass link</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -10,7 +12,8 @@
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<main class="wrap">
+<a class="skip" href="#main">Lewati ke konten</a>
+<main class="wrap" id="main">
   <div class="top">
     <a class="logo" href="index.html"><i><svg viewBox="0 0 24 24"><path d="M5 5l7 7-7 7"/><path d="M13 5l7 7-7 7"/></svg></i>Skip URL</a>
     <div class="tools">
@@ -24,13 +27,13 @@
   </div>
 
   <header class="hero">
-    <h1>Bypass By Rayz.</h1>
+    <h1>Tempel link, langsung ke tujuan.</h1>
     <p class="sub">Layanan dikenali otomatis dari alamat linknya, jadi Anda tidak perlu memilih apa pun.</p>
   </header>
 
   <div class="panel" id="box">
     <div class="field">
-      <input type="text" id="url" placeholder="Tempel link di sini" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Link yang ingin di-bypass">
+      <input type="text" id="url" inputmode="url" placeholder="Tempel link di sini" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Link yang ingin di-bypass">
       <button class="go" id="go" type="button">Bypass</button>
     </div>
     <div class="detect" id="detect" aria-live="polite"></div>
