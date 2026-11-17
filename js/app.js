@@ -45,7 +45,7 @@
     } else {
       detectEl.append(
         C.el("span", { text: host }),
-        C.el("span", { class: "chip none", text: "Domain belum dikenali" })
+        C.el("span", { class: "chip none", text: "Dicoba lewat Universal" })
       );
     }
 
@@ -60,39 +60,60 @@
   }
 
   /* ---------- Membaca respons API ---------- */
-  const KEYS = ["result", "bypassed", "bypass", "destination", "target", "final", "final_url", "redirect", "link", "url", "data", "content", "message"];
+  // Kunci yang biasa berisi link hasil, urut dari yang paling spesifik.
+  const URL_KEYS = ["bypassed_url", "bypassedUrl", "bypass_url", "bypassed", "bypass", "result_url", "result",
+    "destination_url", "destination", "final_url", "final", "target", "redirect", "link", "data", "url"];
+  const TEXT_KEYS = ["result", "data", "content", "message"];
 
-  function pickResult(obj, depth) {
-    depth = depth || 0;
+  // Cari link http(s). Kunci "original_*" dilewati karena itu link asal, bukan hasil.
+  function findUrl(obj, depth) {
     if (obj == null || depth > 4) return "";
-    if (typeof obj === "string") return obj;
+    if (typeof obj === "string") return C.isHttp(obj) ? obj.trim() : "";
     if (Array.isArray(obj)) {
-      for (let i = 0; i < obj.length; i++) { const r = pickResult(obj[i], depth + 1); if (r) return r; }
+      for (let i = 0; i < obj.length; i++) { const r = findUrl(obj[i], depth + 1); if (r) return r; }
       return "";
     }
     if (typeof obj === "object") {
-      for (let i = 0; i < KEYS.length; i++) {
-        if (KEYS[i] in obj) { const r = pickResult(obj[KEYS[i]], depth + 1); if (r) return r; }
+      for (let i = 0; i < URL_KEYS.length; i++) {
+        if (URL_KEYS[i] in obj) { const r = findUrl(obj[URL_KEYS[i]], depth + 1); if (r) return r; }
       }
-      for (const k in obj) { const r = pickResult(obj[k], depth + 1); if (r) return r; }
+      for (const k in obj) {
+        if (/^original/i.test(k)) continue;
+        const r = findUrl(obj[k], depth + 1);
+        if (r) return r;
+      }
+    }
+    return "";
+  }
+
+  function pickResult(obj) {
+    const u = findUrl(obj, 0);
+    if (u) return u;
+    // Tidak ada link: ambil teks hasil (misalnya isi paste atau kunci), bukan field seperti creator.
+    if (obj && typeof obj === "object") {
+      for (let i = 0; i < TEXT_KEYS.length; i++) {
+        const v = obj[TEXT_KEYS[i]];
+        if (typeof v === "string" && v.trim()) return v.trim();
+      }
     }
     return "";
   }
 
   async function callEndpoint(endpoint, target) {
-    const api = CFG.PROXY_URL + "?endpoint=" + encodeURIComponent(endpoint) + "&url=" + encodeURIComponent(target);
+    const api = CFG.PROXY_URL + "?service=" + encodeURIComponent(endpoint) + "&url=" + encodeURIComponent(target);
     const res = await fetch(api);
     const text = await res.text();
     let json = null;
     try { json = JSON.parse(text); } catch (e) {}
 
-    if (!res.ok) throw Object.assign(new Error("Server membalas " + res.status), { raw: json || text });
+    if (!res.ok) throw Object.assign(new Error((json && json.message) || ("Server membalas " + res.status)), { raw: json || text });
     if (json && (json.success === false || json.status === false || json.error)) {
       throw Object.assign(new Error(json.message || json.error || "Layanan menolak link ini"), { raw: json });
     }
     const picked = json ? pickResult(json) : text.trim();
     if (!picked) throw Object.assign(new Error("Respons tidak berisi link tujuan"), { raw: json || text });
-    return { picked: picked, raw: json || text, endpoint: endpoint };
+    return { picked: picked, raw: json || text, endpoint: endpoint, provider: res.headers.get("X-Provider") || "",
+      ms: (json && typeof json.execution_time_ms === "number") ? json.execution_time_ms : null };
   }
 
   /* ---------- Proses utama ---------- */
@@ -110,11 +131,7 @@
     }
 
     const endpoints = manualEndpoint ? [manualEndpoint] : d.found.map(function (s) { return s.endpoint; });
-    if (!endpoints.length) {
-      showError("Domain belum dikenali", "Pilih layanan secara manual pada kolom Layanan, atau cek halaman Domain untuk melihat yang didukung.");
-      box.classList.add("has-error");
-      return;
-    }
+    if (!manualEndpoint && endpoints.indexOf("universal") === -1) endpoints.push("universal");
 
     go.disabled = true;
     go.replaceChildren(C.el("span", { class: "spin" }), document.createTextNode("Memproses"));
@@ -125,7 +142,7 @@
       try {
         const r = await callEndpoint(endpoints[i], d.url);
         const svc = SERVICES.find(function (s) { return s.endpoint === r.endpoint; });
-        C.addHistory({ url: d.url, host: C.hostOf(d.url), endpoint: r.endpoint, service: svc ? svc.name : r.endpoint, result: r.picked, ok: true });
+        C.addHistory({ url: d.url, host: C.hostOf(d.url), endpoint: r.endpoint, service: svc ? svc.name : r.endpoint, result: r.picked, provider: r.provider, ok: true });
         r.original = d.url;
         showResult(r);
         done();
@@ -152,7 +169,7 @@
     const ok = C.isHttp(r.picked);
     const card = C.el("div", { class: "card" });
     card.append(C.el("h2", { text: "Hasil bypass" }));
-    if (svc) card.append(C.el("p", { class: "svc-name", text: "Lewat layanan " + svc.name }));
+    if (svc) card.append(C.el("p", { class: "svc-name", text: "Lewat layanan " + svc.name + (r.provider ? " (server " + r.provider + ")" : "") + (r.ms != null ? ", " + r.ms + " ms" : "") }));
 
     const res = ok
       ? C.el("a", { class: "res", href: r.picked, target: "_blank", rel: "noopener noreferrer", text: r.picked })
