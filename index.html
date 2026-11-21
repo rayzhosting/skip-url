@@ -2,15 +2,23 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Bypass link</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f2fb8">
+<meta name="description" content="Skip URL: tempel link, layanan dikenali otomatis, langsung ke tujuan.">
+<title>Skip URL — Tempel link, langsung ke tujuan</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
+<script>
+/* terapkan tema sebelum render agar tidak berkedip */
+(function(){try{var t=localStorage.getItem("skipurl.theme");if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=t;}catch(e){}})();
+</script>
 </head>
 <body>
-<main class="wrap">
+<div class="aurora" aria-hidden="true"><b></b><b></b><b></b></div>
+<a class="skip" href="#main">Lewati ke konten</a>
+<main class="wrap" id="main">
   <div class="top">
     <a class="logo" href="index.html"><i><svg viewBox="0 0 24 24"><path d="M5 5l7 7-7 7"/><path d="M13 5l7 7-7 7"/></svg></i>Skip URL</a>
     <div class="tools">
@@ -19,20 +27,24 @@
         <a href="domains.html">Domain</a>
         <a href="history.html">Riwayat</a>
       </nav>
-      <button type="button" class="sndbtn" id="sound" aria-pressed="true" aria-label="Matikan suara"></button>
+      <button type="button" class="iconbtn" id="theme" aria-label="Ganti tema"></button>
+      <button type="button" class="sndbtn iconbtn" id="sound" aria-pressed="true" aria-label="Matikan suara"></button>
+      <button type="button" class="iconbtn" id="settings" aria-label="Pengaturan"></button>
     </div>
   </div>
 
   <header class="hero">
-    <h1>Tempel link, langsung ke tujuan.</h1>
-    <p class="sub">Layanan dikenali otomatis dari alamat linknya, jadi Anda tidak perlu memilih apa pun.</p>
+    <span class="badge">Otomatis • 10 layanan didukung</span>
+    <h1>Tempel link, <span class="grad">langsung ke tujuan.</span></h1>
+    <p class="sub">Layanan dikenali otomatis dari alamat linknya, jadi Anda tidak perlu memilih apa pun. Tekan Bypass dan hasilnya langsung muncul.</p>
   </header>
 
   <div class="panel" id="box">
     <div class="field">
-      <input type="text" id="url" placeholder="Tempel link di sini" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Link yang ingin di-bypass">
+      <input type="text" id="url" inputmode="url" placeholder="Tempel link di sini" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Link yang ingin di-bypass">
       <button class="go" id="go" type="button">Bypass</button>
     </div>
+    <p class="kbd-hint">Tips: <span class="kbd">Ctrl</span> + <span class="kbd">V</span> langsung memproses · <span class="kbd">Ctrl</span> + <span class="kbd">K</span> fokus ke kolom</p>
     <div class="detect" id="detect" aria-live="polite"></div>
   </div>
 
@@ -41,10 +53,10 @@
   <footer>Hasil bergantung pada layanan API. Jika sebuah link gagal, coba pilih layanan secara manual.</footer>
 </main>
 
-<script src="js/config.js"></script>
 <script src="js/services.js"></script>
 <script src="js/common.js"></script>
 <script src="js/fx.js"></script>
+<script>window.SkipCommon.initTheme();</script>
 <script src="js/app.js"></script>
 </body>
 </html>
