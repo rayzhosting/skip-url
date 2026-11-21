@@ -1,9 +1,9 @@
-/* Halaman riwayat: daftar skip milik pengguna di browser ini. */
+/* Halaman riwayat: statistik, filter, pencarian, ekspor JSON. */
 (function () {
   const C = window.SkipCommon;
   const $ = function (id) { return document.getElementById(id); };
 
-  const listEl = $("list"), search = $("search"), summary = $("summary"), clearBtn = $("clear");
+  const listEl = $("list"), search = $("search"), summary = $("summary"), clearBtn = $("clear"), exportBtn = $("export"), statsEl = $("stats");
   let filter = "all";
 
   function matches(item, q) {
@@ -13,6 +13,21 @@
     return [item.url, item.result, item.host, item.service].some(function (v) {
       return (v || "").toLowerCase().includes(q);
     });
+  }
+
+  function renderStats(all) {
+    if (!all.length) { statsEl.hidden = true; return; }
+    const ok = all.filter(function (x) { return x.ok; }).length;
+    const rate = all.length ? Math.round((ok / all.length) * 100) : 0;
+    const today = all.filter(function (x) { return Date.now() - x.time < 86400000; }).length;
+    statsEl.hidden = false;
+    statsEl.innerHTML = "";
+    statsEl.append(
+      C.el("div", { class: "stat" }, [C.el("b", { text: String(all.length) }), C.el("span", { text: "Total bypass" })]),
+      C.el("div", { class: "stat" }, [C.el("b", { text: String(ok) }), C.el("span", { text: "Berhasil" })]),
+      C.el("div", { class: "stat" }, [C.el("b", { text: rate + "%" }), C.el("span", { text: "Tingkat sukses" })]),
+      C.el("div", { class: "stat" }, [C.el("b", { text: String(today) }), C.el("span", { text: "24 jam terakhir" })])
+    );
   }
 
   function row(item) {
@@ -28,7 +43,7 @@
       body.push(C.el("div", { class: "h-line" }, [
         C.el("span", { class: "h-label", text: "Bypass" }),
         ok
-          ? C.el("a", { class: "h-text link", href: item.result, target: "_blank", rel: "noopener noreferrer", text: item.result })
+          ? C.el("a", { class: "h-text link", href: item.result, target: "_blank", rel: "noopener noreferrer", title: item.result, text: C.shortUrl(item.result, 72) })
           : C.el("span", { class: "h-text", text: item.result })
       ]));
     } else {
@@ -40,7 +55,7 @@
 
     body.push(C.el("div", { class: "h-line" }, [
       C.el("span", { class: "h-label", text: "Asli" }),
-      C.el("span", { class: "h-text muted", text: item.url })
+      C.el("span", { class: "h-text muted", title: item.url, text: C.shortUrl(item.url, 60) })
     ]));
 
     const act = C.el("div", { class: "actions" });
@@ -52,7 +67,7 @@
     act.append(
       C.el("a", { class: "ghost", href: "index.html?url=" + encodeURIComponent(item.url), text: "Bypass lagi" }),
       C.el("button", { class: "ghost", type: "button", text: "Hapus", onclick: function () {
-        C.removeHistory(item.id); render();
+        C.removeHistory(item.id); render(); C.toast("Riwayat dihapus");
       } })
     );
     body.push(act);
@@ -66,7 +81,8 @@
     const shown = all.filter(function (x) { return matches(x, q); });
 
     listEl.innerHTML = "";
-    clearBtn.hidden = !all.length;
+    clearBtn.hidden = exportBtn.hidden = !all.length;
+    renderStats(all);
 
     if (!all.length) {
       summary.textContent = "Belum ada riwayat";
@@ -100,7 +116,12 @@
   });
 
   clearBtn.addEventListener("click", function () {
-    if (confirm("Hapus semua riwayat di browser ini?")) { C.clearHistory(); render(); }
+    if (confirm("Hapus semua riwayat di browser ini?")) { C.clearHistory(); render(); C.toast("Semua riwayat dihapus"); }
+  });
+  exportBtn.addEventListener("click", function () {
+    C.exportHistory();
+    C.toast("File riwayat diunduh", "ok");
+    if (window.Sfx) window.Sfx.play("success");
   });
   search.addEventListener("input", render);
   render();

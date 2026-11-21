@@ -1,6 +1,6 @@
 /*
-  Efek suara (disintesis dengan Web Audio, tanpa file audio) dan riak tombol.
-  Suara baru bisa berbunyi setelah pengguna menyentuh halaman (aturan browser).
+  Efek interaktif: suara (Web Audio, tanpa file), riak tombol, percikan klik,
+  dan tombol suara/tema/pengaturan.
 */
 (function () {
   const KEY = "skipurl.sound";
@@ -16,7 +16,7 @@
     if (!ctx) {
       ctx = new AC();
       master = ctx.createGain();
-      master.gain.value = 0.55;
+      master.gain.value = 0.5;
       master.connect(ctx.destination);
     }
     if (ctx.state === "suspended") ctx.resume();
@@ -40,6 +40,8 @@
     click: function (c, t) { tone(c, t, { f: 1250, f2: 720, d: 0.05, v: 0.07, type: "triangle" }); },
     pop: function (c, t) { tone(c, t, { f: 520, f2: 920, d: 0.09, v: 0.09 }); },
     detect: function (c, t) { tone(c, t, { f: 1568, d: 0.07, v: 0.04 }); },
+    hover: function (c, t) { tone(c, t, { f: 2400, d: 0.03, v: 0.015 }); },
+    toggle: function (c, t) { tone(c, t, { f: 880, f2: 440, d: 0.08, v: 0.05, type: "square" }); },
     success: function (c, t) {
       [523.25, 659.25, 783.99, 1046.5].forEach(function (f, i) {
         tone(c, t + i * 0.075, { f: f, d: 0.55 - i * 0.05, v: 0.08 });
@@ -58,9 +60,9 @@
     sounds[name](c, c.currentTime + 0.005);
   }
 
-  /* ---------- tombol suara ---------- */
   const ICON_ON = '<svg viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5H4z"/><path d="M15.5 9a4 4 0 0 1 0 6"/><path d="M18 6.5a8 8 0 0 1 0 11"/></svg>';
   const ICON_OFF = '<svg viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5H4z"/><path d="M16 9.5l5 5"/><path d="M21 9.5l-5 5"/></svg>';
+  const ICON_GEAR = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M3.6 7.5l2.3 1.3M18.1 15.2l2.3 1.3M3.6 16.5l2.3-1.3M18.1 8.8l2.3-1.3"/></svg>';
 
   function paint(btn) {
     btn.innerHTML = enabled ? ICON_ON : ICON_OFF;
@@ -80,16 +82,28 @@
     });
   }
 
-  /* ---------- riak dan suara klik ---------- */
-  const RIPPLE = ".go, .ghost, nav a, .tabs button";
-  const CLICKABLE = "button, a[href], summary, select";
+  const gearBtn = document.getElementById("settings");
+  if (gearBtn) {
+    gearBtn.innerHTML = ICON_GEAR;
+    gearBtn.title = "Pengaturan";
+    gearBtn.addEventListener("click", function () {
+      play("pop");
+      if (window.SkipCommon) window.SkipCommon.openSettings();
+    });
+  }
+
+  /* ---------- riak + suara klik + percikan ---------- */
+  const RIPPLE = ".go, .ghost, nav a, .tabs button, .iconbtn";
+  const CLICKABLE = "button, a[href], summary, select, input";
 
   document.addEventListener("pointerdown", function (e) {
     const t = e.target.closest ? e.target.closest(CLICKABLE) : null;
-    if (!t) return;
-    if (t.id !== "sound" && !t.disabled) play("click");
+    if (t) {
+      if (t.id !== "sound" && !t.disabled) play("click");
+      if (window.SkipCommon) window.SkipCommon.sparks(e.clientX, e.clientY);
+    }
 
-    const r = t.matches(RIPPLE) ? t : null;
+    const r = (t && t.matches(RIPPLE)) ? t : null;
     if (!r || r.disabled) return;
     const rect = r.getBoundingClientRect();
     const d = Math.max(rect.width, rect.height) * 2;
