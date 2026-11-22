@@ -2,23 +2,16 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0f2fb8">
-<meta name="description" content="Skip URL: tempel link, layanan dikenali otomatis, langsung ke tujuan.">
-<title>Skip URL — Tempel link, langsung ke tujuan</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#050505">
+<title>Skip URL - Bypass link tanpa ribet</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
-<script>
-/* terapkan tema sebelum render agar tidak berkedip */
-(function(){try{var t=localStorage.getItem("skipurl.theme");if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=t;}catch(e){}})();
-</script>
 </head>
 <body>
-<div class="aurora" aria-hidden="true"><b></b><b></b><b></b></div>
-<a class="skip" href="#main">Lewati ke konten</a>
-<main class="wrap" id="main">
+<main class="wrap">
   <div class="top">
     <a class="logo" href="index.html"><i><svg viewBox="0 0 24 24"><path d="M5 5l7 7-7 7"/><path d="M13 5l7 7-7 7"/></svg></i>Skip URL</a>
     <div class="tools">
@@ -27,36 +20,77 @@
         <a href="domains.html">Domain</a>
         <a href="history.html">Riwayat</a>
       </nav>
-      <button type="button" class="iconbtn" id="theme" aria-label="Ganti tema"></button>
-      <button type="button" class="sndbtn iconbtn" id="sound" aria-pressed="true" aria-label="Matikan suara"></button>
-      <button type="button" class="iconbtn" id="settings" aria-label="Pengaturan"></button>
+      <button type="button" class="sndbtn" id="sound" aria-pressed="true" aria-label="Matikan suara"></button>
     </div>
   </div>
 
-  <header class="hero">
-    <span class="badge">Otomatis • 10 layanan didukung</span>
-    <h1>Tempel link, <span class="grad">langsung ke tujuan.</span></h1>
-    <p class="sub">Layanan dikenali otomatis dari alamat linknya, jadi Anda tidak perlu memilih apa pun. Tekan Bypass dan hasilnya langsung muncul.</p>
+  <header class="hero center">
+    <div class="pills"><span>30+ layanan</span><span>Tanpa survei</span><span>2 server otomatis</span></div>
+    <h1>Lewati tunggu.<br>Langsung ke tujuan.</h1>
+    <p class="sub">Tempel link, biarkan Skip URL mengurus redirect, timer, dan iklannya.</p>
   </header>
 
   <div class="panel" id="box">
-    <div class="field">
-      <input type="text" id="url" inputmode="url" placeholder="Tempel link di sini" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Link yang ingin di-bypass">
+    <div class="modes" role="group" aria-label="Mode">
+      <button type="button" data-mode="single" aria-pressed="true">Satu link</button>
+      <button type="button" data-mode="bulk" aria-pressed="false">Banyak link</button>
+    </div>
+    <div class="field" id="single">
+      <input type="text" id="url" placeholder="Tempel link di sini" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Link yang ingin di-bypass">
       <button class="go" id="go" type="button">Bypass</button>
     </div>
-    <p class="kbd-hint">Tips: <span class="kbd">Ctrl</span> + <span class="kbd">V</span> langsung memproses · <span class="kbd">Ctrl</span> + <span class="kbd">K</span> fokus ke kolom</p>
+    <div class="field col" id="bulkbox" hidden>
+      <textarea id="bulk" placeholder="Satu link per baris (maksimal 20)" spellcheck="false" aria-label="Daftar link"></textarea>
+      <button class="go" id="bulkgo" type="button">Bypass semua</button>
+    </div>
     <div class="detect" id="detect" aria-live="polite"></div>
+  </div>
+
+  <div class="popular">
+    <span>Populer</span>
+    <a href="domains.html?q=linkvertise">Linkvertise</a>
+    <a href="domains.html?q=ouo">Ouo</a>
+    <a href="domains.html?q=sfl">SFL</a>
+    <a href="domains.html?q=sub4unlock">Sub4Unlock</a>
+    <a href="domains.html?q=shrinkme">Shrinkme</a>
+    <a href="domains.html">Semua layanan</a>
   </div>
 
   <div id="out" aria-live="polite"></div>
 
-  <footer>Hasil bergantung pada layanan API. Jika sebuah link gagal, coba pilih layanan secara manual.</footer>
+  <div class="stats">
+    <div><b id="st-ok">0</b><span>Berhasil di perangkat ini</span></div>
+    <div><b id="st-svc">30</b><span>Layanan didukung</span></div>
+    <div><b>2</b><span>Server dengan cadangan</span></div>
+  </div>
+
+  <section class="blk">
+    <h2>Cara kerja</h2>
+    <div class="steps">
+      <div class="step"><i>01</i><h3>Tempel link</h3><p>Masukkan link dari layanan yang didukung. Mode banyak link untuk beberapa sekaligus.</p></div>
+      <div class="step"><i>02</i><h3>Deteksi otomatis</h3><p>Layanan dikenali dari domainnya. Jika satu server gagal, server cadangan langsung dipakai.</p></div>
+      <div class="step"><i>03</i><h3>Ambil hasil</h3><p>Salin atau buka link tujuan dengan satu klik. Link asli tetap ditampilkan.</p></div>
+    </div>
+  </section>
+
+  <section class="blk faq">
+    <h2>Pertanyaan umum</h2>
+    <details><summary>Apakah gratis?</summary><p>Ya. Tanpa akun, tanpa survei, tanpa instalasi.</p></details>
+    <details><summary>Layanan apa saja yang didukung?</summary><p>Lihat halaman Domain. Link dari domain yang belum dikenali otomatis dicoba lewat layanan Universal.</p></details>
+    <details><summary>Kenapa link saya gagal?</summary><p>Link bisa sudah kedaluwarsa, penyedia baru memperbarui sistemnya, atau server sedang sibuk. Coba lagi sebentar atau pilih layanan secara manual.</p></details>
+    <details><summary>Apakah riwayat saya disimpan?</summary><p>Hanya di browser Anda. Riwayat bisa dihapus kapan saja dari halaman Riwayat.</p></details>
+  </section>
+
+  <footer class="foot">
+    <span>Skip URL</span>
+    <a class="status" id="status" href="/api/skip?health=1"><i class="dot"></i><span>Memeriksa server</span></a>
+  </footer>
 </main>
 
+<script src="js/config.js"></script>
 <script src="js/services.js"></script>
 <script src="js/common.js"></script>
 <script src="js/fx.js"></script>
-<script>window.SkipCommon.initTheme();</script>
 <script src="js/app.js"></script>
 </body>
 </html>
