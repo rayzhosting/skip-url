@@ -5,6 +5,7 @@
   const $ = function (id) { return document.getElementById(id); };
 
   const list = $("list"), search = $("search"), summary = $("summary");
+  let extraEl = null;
 
   const total = SERVICES.reduce(function (n, s) { return n + s.domains.length; }, 0);
 
@@ -15,6 +16,7 @@
     if (asUrl && /^https?:\/\//i.test(q)) q = C.hostOf(asUrl);
 
     list.innerHTML = "";
+    if (extraEl) { extraEl.remove(); extraEl = null; }
     let shownServices = 0, shownDomains = 0;
 
     SERVICES.forEach(function (s) {
@@ -57,6 +59,22 @@
     }
   }
 
-  search.addEventListener("input", render);
+  function renderExtra() {
+    if (search.value.trim()) return;
+    const names = SERVICES.filter(function (s) { return !s.domains.length && s.endpoint !== "universal"; });
+    if (!names.length) return;
+    const chips = C.el("div", { class: "doms" });
+    names.forEach(function (s) { chips.append(C.el("span", { text: s.name })); });
+    extraEl = C.el("div", { class: "extra" }, [
+      C.el("p", { class: "note", text: "Layanan berikut tersedia tetapi belum punya daftar domain. Pilih manual di halaman Bypass, atau biarkan otomatis lewat Universal." }),
+      chips
+    ]);
+    list.after(extraEl);
+  }
+
+  search.addEventListener("input", function () { render(); renderExtra(); });
   render();
+  const q0 = new URLSearchParams(location.search).get("q");
+  if (q0) { search.value = q0; render(); }
+  renderExtra();
 })();
