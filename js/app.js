@@ -198,13 +198,28 @@
     out.append(card);
   }
 
+  // Ubah daftar error percobaan menjadi baris teks yang mudah dibaca.
+  function readable(raw) {
+    if (!Array.isArray(raw)) return raw;
+    const lines = [];
+    raw.forEach(function (e) {
+      const att = e && e.detail && e.detail.attempts;
+      if (att && att.length) {
+        att.forEach(function (a) { lines.push(a.provider + (a.endpoint ? " (" + a.endpoint + ")" : "") + ": " + a.message); });
+      } else {
+        lines.push((e && e.layanan ? e.layanan : "?") + ": " + (e && e.pesan ? e.pesan : "gagal"));
+      }
+    });
+    return lines.filter(function (l, i) { return lines.indexOf(l) === i; }).join("\n");
+  }
+
   function showError(title, msg, raw) {
     fx("error"); pulse("shake");
     const card = C.el("div", { class: "card err" }, [
       C.el("h2", { text: title }),
       C.el("p", { class: "note", text: msg })
     ]);
-    if (raw) appendRaw(card, raw);
+    if (raw) appendRaw(card, readable(raw));
     out.innerHTML = "";
     out.append(card);
   }
@@ -313,7 +328,10 @@
   }
   (function initInfo() {
     const sv = $("st-svc");
-    if (sv) sv.textContent = SERVICES.filter(function (s) { return s.endpoint !== "universal"; }).length;
+    const total = SERVICES.filter(function (s) { return s.endpoint !== "universal"; }).length;
+    if (sv) sv.textContent = total;
+    const pl = document.querySelector(".pills span");
+    if (pl) pl.textContent = total + " layanan";
     stats();
     const pill = $("status");
     if (!pill) return;
