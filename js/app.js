@@ -333,6 +333,7 @@
     const pl = document.querySelector(".pills span");
     if (pl) pl.textContent = total + " layanan";
     stats();
+    C.syncFromServer().then(stats);
     const pill = $("status");
     if (!pill) return;
     function set(cls, text) { pill.className = "status " + cls; pill.querySelector("span").textContent = text; }
