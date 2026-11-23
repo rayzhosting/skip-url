@@ -8,9 +8,11 @@
 
   Environment variable (set di dashboard Vercel atau lewat `vercel env add`):
     THERESAV_API_KEY   key untuk api.theresav.com
+    THERESAVEU_API_KEY key untuk api.theresav.eu (opsional, kalau kosong memakai THERESAV_API_KEY)
     FGSI_API_KEY       key untuk fgsi.dpdns.org (opsional)
-    PROVIDER_ORDER     urutan provider, default "theresav,fgsi,bypassvip"
+    PROVIDER_ORDER     urutan provider, default "theresaveu,theresav,fgsi,bypassvip"
                        contoh hanya theresav: theresav
+    THERESAVEU_BASE_URL opsional, ganti base URL Theresav .eu
     BYPASSVIP_BASE_URL opsional, ganti base URL Bypass.vip (provider ini tanpa API key)
     THERESAV_BASE_URL  opsional, ganti base URL Theresav
     FGSI_BASE_URL      opsional, ganti base URL FGSI
@@ -126,20 +128,31 @@ async function logEvent(ev) {
   } catch (e) { /* pencatatan tidak boleh mengganggu hasil */ }
 }
 
+// id layanan Theresav (nama endpoint sama dengan id); dipakai .com dan .eu
+const THERESAV_MAP = [
+  "adlinksumo", "adsafe", "bicolink", "biplab", "cutwin", "delta", "droplink",
+  "earnlinks", "izen", "linkpays", "linkpoi", "linkvertise", "moneyblink",
+  "move2link", "ouo", "sfl", "sub2unlock", "sub4unlock", "vplink", "pndk",
+  "shrinkme", "tpi", "universal"
+].reduce(function (m, k) { m[k] = k; return m; }, {});
+
 const PROVIDERS = {
+  theresaveu: {
+    name: "Theresav EU",
+    keyEnv: "THERESAVEU_API_KEY",
+    keyFallbackEnv: "THERESAV_API_KEY", // key .com dipakai juga bila key .eu tidak diisi
+    baseEnv: "THERESAVEU_BASE_URL",
+    base: "https://api.theresav.eu/api/bypass/",
+    auth: { type: "header", name: "x-api-key" },
+    map: THERESAV_MAP
+  },
   theresav: {
     name: "Theresav",
     keyEnv: "THERESAV_API_KEY",
     baseEnv: "THERESAV_BASE_URL",
     base: "https://api.theresav.com/api/bypass/",
     auth: { type: "header", name: "x-api-key" },
-    // id layanan -> nama endpoint di provider (nama sama)
-    map: [
-      "adlinksumo", "adsafe", "bicolink", "biplab", "cutwin", "delta", "droplink",
-      "earnlinks", "izen", "linkpays", "linkpoi", "linkvertise", "moneyblink",
-      "move2link", "ouo", "sfl", "sub2unlock", "sub4unlock", "vplink", "pndk",
-      "shrinkme", "tpi", "universal"
-    ].reduce(function (m, k) { m[k] = k; return m; }, {})
+    map: THERESAV_MAP
   },
   fgsi: {
     name: "FGSI",
@@ -179,8 +192,11 @@ const PROVIDERS = {
   }
 };
 
-function keyOf(p) { return p.keyEnv ? process.env[p.keyEnv] : ""; }
-function isReady(p) { return !p.keyEnv || Boolean(process.env[p.keyEnv]); }
+function keyOf(p) {
+  if (!p.keyEnv) return "";
+  return process.env[p.keyEnv] || (p.keyFallbackEnv ? process.env[p.keyFallbackEnv] : "") || "";
+}
+function isReady(p) { return !p.keyEnv || Boolean(keyOf(p)); }
 
 const ATTEMPT_TIMEOUT_MS = 10000; // batas waktu per percobaan
 const TOTAL_BUDGET_MS = 27000;    // batas total (maxDuration fungsi = 30 detik)
@@ -204,7 +220,7 @@ function originAllowed(req) {
 }
 
 function providerOrder() {
-  const raw = process.env.PROVIDER_ORDER || "theresav,fgsi,bypassvip";
+  const raw = process.env.PROVIDER_ORDER || "theresaveu,theresav,fgsi,bypassvip";
   const seen = {};
   return raw.split(",").map(function (s) { return s.trim().toLowerCase(); })
     .filter(function (id) {
