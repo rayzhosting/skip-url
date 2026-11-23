@@ -68,23 +68,32 @@ function clientInfo(req) {
   return { ip: ip, g: g, d: parseDevice(h) };
 }
 
-// Ambil link hasil dari respons provider (untuk dicatat)
-function pickLink(text) {
+// Ambil link hasil dari respons provider (untuk dicatat). Aturan sama dengan js/app.js:
+// buang link asal, dahulukan link berdomain beda dari link asal, lalu urutan kunci.
+function pickLink(text, input) {
   const isUrl = function (s) { return typeof s === "string" && /^https?:\/\/\S+$/i.test(s.trim()); };
   let obj;
   try { obj = JSON.parse(text); } catch (e) { const t = String(text || "").trim(); return isUrl(t) ? t : ""; }
-  const KEYS = ["bypassed_url", "bypassedUrl", "bypass_url", "result", "destination", "final_url", "redirect", "link", "data", "url"];
-  function find(o, d) {
-    if (o == null || d > 4) return "";
-    if (typeof o === "string") return isUrl(o) ? o.trim() : "";
-    if (Array.isArray(o)) { for (let i = 0; i < o.length; i++) { const r = find(o[i], d + 1); if (r) return r; } return ""; }
+  const KEYS = ["bypassed_url", "bypassedUrl", "bypass_url", "bypassed", "bypass", "result_url", "result",
+    "destination_url", "destination", "final_url", "final", "original", "linkGo", "linkgo", "target", "redirect", "link", "data", "url"];
+  const hostOf = function (u) { try { return new URL(u).hostname.replace(/^www\./, "").toLowerCase(); } catch (e) { return ""; } };
+  const norm = function (u) { try { const x = new URL(u); return hostOf(u) + x.pathname.replace(/\/+$/, "") + x.search; } catch (e) { return String(u || "").trim(); } };
+  const rank = function (k) { const i = KEYS.indexOf(k); return i === -1 ? KEYS.length : i; };
+  const all = [];
+  (function walk(o, k, d) {
+    if (o == null || d > 4) return;
+    if (typeof o === "string") { if (isUrl(o)) all.push({ k: k, u: o.trim(), d: d }); return; }
+    if (Array.isArray(o)) { o.forEach(function (v) { walk(v, k, d + 1); }); return; }
     if (typeof o === "object") {
-      for (let i = 0; i < KEYS.length; i++) { if (KEYS[i] in o) { const r = find(o[KEYS[i]], d + 1); if (r) return r; } }
-      for (const k in o) { if (/^original/i.test(k)) continue; const r = find(o[k], d + 1); if (r) return r; }
+      Object.keys(o).forEach(function (key) { if (!/^(socialactions|social_actions|actions|steps|tasks)$/i.test(key)) walk(o[key], key, d + 1); });
     }
-    return "";
-  }
-  return find(obj, 0);
+  })(obj, "", 0);
+  const inN = norm(input), inH = hostOf(input);
+  const cand = all.filter(function (c) { return norm(c.u) !== inN; }).sort(function (a, b) {
+    const ah = hostOf(a.u) !== inH ? 0 : 1, bh = hostOf(b.u) !== inH ? 0 : 1;
+    return ah - bh || rank(a.k) - rank(b.k) || a.d - b.d;
+  });
+  return cand.length ? cand[0].u : "";
 }
 
 // Catat satu percobaan untuk pemantauan pemilik situs (lihat api/admin.js).
@@ -339,7 +348,7 @@ module.exports = async function handler(req, res) {
       }
       const r = await attempt(p, remotes[j], target, key, Math.min(ATTEMPT_TIMEOUT_MS, left));
       if (r.ok) {
-        await logEvent({ t: Date.now(), who: who, service: service, host: parsed.hostname.replace(/^www\./, ""), url: target, ok: true, link: pickLink(r.text), provider: p.name, ms: Date.now() - started });
+        await logEvent({ t: Date.now(), who: who, service: service, host: parsed.hostname.replace(/^www\./, ""), url: target, ok: true, link: pickLink(r.text, target), provider: p.name, ms: Date.now() - started });
         res.statusCode = 200;
         res.setHeader("Cache-Control", "no-store");
         res.setHeader("Content-Type", r.type);
