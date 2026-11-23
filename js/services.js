@@ -31,7 +31,7 @@
     { endpoint: "earnlinks", name: "EarnLinks", domains: [] },
     { endpoint: "izen", name: "Izen", domains: [] },
     { endpoint: "linkpoi", name: "LinkPoi", domains: [] },
-    { endpoint: "move2link", name: "Move2Link", domains: [] },
+    { endpoint: "move2link", name: "Move2Link", domains: ["move2link.co"] },
     { endpoint: "pndk", name: "Pndk", domains: [] },
 
     /* Khusus provider FGSI (cadangan) */
@@ -45,4 +45,14 @@
     /* Cadangan otomatis untuk domain yang tidak dikenali */
     { endpoint: "universal", name: "Universal", domains: [] }
   ];
+
+  // Kata kunci nama domain: menangkap domain lain/TLD lain dari layanan yang sama
+  // (misalnya droplink.in atau move2link.com) walau belum ada di daftar domain.
+  const KEYWORDS = {
+    move2link: ["move2link"], linkpoi: ["linkpoi"], earnlinks: ["earnlinks"], cutwin: ["cutwin"], biplab: ["biplab"],
+    droplink: ["droplink"], linkpays: ["linkpays"], moneyblink: ["moneyblink"], bicolink: ["bicolink"],
+    vplink: ["vplink"], shrinkme: ["shrinkme"], sub2unlock: ["sub2unlock"], sub4unlock: ["sub4unlock", "subs4unlock"],
+    linkvertise: ["linkvertise"], adlinksumo: ["adlinksumo"], adsafe: ["adsafelink"]
+  };
+  window.SERVICES.forEach(function (s) { s.keywords = KEYWORDS[s.endpoint] || []; });
 })();

@@ -37,23 +37,21 @@
       return { url: url, found: found };
     }
 
-    if (found.length) {
-      detectEl.append(
-        C.el("span", { text: "Terdeteksi" }),
-        C.el("span", { class: "chip", text: found[0].name })
-      );
-    } else {
-      detectEl.append(
-        C.el("span", { text: host }),
-        C.el("span", { class: "chip none", text: "Dicoba lewat Universal" })
-      );
+    const lbl = C.el("span"), chip = C.el("span");
+    function paintChip() {
+      const man = manualEndpoint ? SERVICES.find(function (s) { return s.endpoint === manualEndpoint; }) : null;
+      if (man) { lbl.textContent = "Dipilih manual"; chip.className = "chip"; chip.textContent = man.name; }
+      else if (found.length) { lbl.textContent = "Terdeteksi"; chip.className = "chip"; chip.textContent = found[0].name; }
+      else { lbl.textContent = host; chip.className = "chip none"; chip.textContent = "Dicoba lewat Universal"; }
     }
+    paintChip();
+    detectEl.append(lbl, chip);
 
     const sel = C.el("select", { "aria-label": "Pilih layanan manual" });
     sel.append(C.el("option", { value: "", text: "Otomatis" }));
     SERVICES.forEach(function (s) { sel.append(C.el("option", { value: s.endpoint, text: s.name })); });
     sel.value = manualEndpoint;
-    sel.addEventListener("change", function () { manualEndpoint = sel.value; });
+    sel.addEventListener("change", function () { manualEndpoint = sel.value; paintChip(); });
     detectEl.append(C.el("label", { class: "manual" }, [C.el("span", { text: "Layanan" }), sel]));
 
     return { url: url, found: found };
@@ -344,8 +342,12 @@
         if (!j || !Array.isArray(j.providers)) { set("warn", "Status tidak tersedia, perbarui api/skip.js"); return; }
         const act = j.providers.filter(function (p) { return p.inOrder; });
         const n = act.filter(function (p) { return p.keySet; }).length;
+        const pills = document.querySelectorAll(".pills span"), sb = document.querySelectorAll(".stats b");
+        if (n && pills[2]) pills[2].textContent = n + " server otomatis";
+        if (n && sb[2]) sb[2].textContent = n;
         if (n) { set("ok", "Operasional (" + n + " server)"); return; }
-        set("warn", "Key belum terbaca: " + (act.map(function (p) { return p.keyEnv; }).join(", ") || "PROVIDER_ORDER kosong"));
+        const missing = act.filter(function (p) { return p.keyEnv && !p.keySet; }).map(function (p) { return p.keyEnv; });
+        set("warn", "Key belum terbaca: " + (missing.join(", ") || "PROVIDER_ORDER kosong"));
       })
       .catch(function () { set("bad", "Server tidak terjangkau"); });
   })();

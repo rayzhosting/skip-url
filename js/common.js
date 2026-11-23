@@ -19,9 +19,15 @@
 
   function matchServices(host) {
     if (!host) return [];
-    return window.SERVICES.filter(function (s) {
-      return s.domains.some(function (d) { return host === d || host.endsWith("." + d); });
+    const scored = [];
+    window.SERVICES.forEach(function (s) {
+      let score = 0;
+      if (s.domains.some(function (d) { return host === d || host.endsWith("." + d); })) score = 2;
+      else if ((s.keywords || []).some(function (k) { return host.indexOf(k) !== -1; })) score = 1;
+      if (score) scored.push({ s: s, score: score });
     });
+    scored.sort(function (a, b) { return b.score - a.score; }); // pencocokan domain didahulukan
+    return scored.map(function (x) { return x.s; });
   }
 
   /* ---------- Riwayat (per pengguna = per browser) ---------- */

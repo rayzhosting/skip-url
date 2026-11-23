@@ -110,6 +110,7 @@
   syncEl.hidden = true;
   listEl.before(syncEl);
 
+  let syncOpen = false;
   function paintSync(msg) {
     syncEl.innerHTML = "";
     const keyBtn = C.el("button", { class: "ghost", type: "button", text: "Salin kunci akun" });
@@ -126,13 +127,16 @@
       else note.textContent = r.error === "Format kunci tidak valid" ? r.error : "Gagal terhubung, coba lagi.";
     });
 
-    syncEl.append(
-      C.el("h2", { text: "Sinkron antar perangkat" }),
-      C.el("p", { class: "note", text: "Riwayat tersimpan di server dan terhubung ke kunci akun di perangkat ini. Pakai kunci yang sama di perangkat lain untuk melihat riwayat yang sama. Jangan bagikan kunci ini ke orang lain." }),
+    const body = C.el("div", { class: "sync-body" }, [
+      C.el("p", { class: "note", text: "Riwayat tersimpan di server dan terhubung ke kunci akun di perangkat ini. Pakai kunci yang sama di perangkat lain untuk melihat riwayat yang sama. Jangan bagikan kunci ini." }),
       C.el("div", { class: "actions" }, [keyBtn]),
-      C.el("div", { class: "search", style: "margin:14px 0 0" }, [C.el("div", { class: "box" }, [inp]), useBtn]),
+      C.el("div", { class: "sync-form" }, [inp, useBtn]),
       note
-    );
+    ]);
+    const det = C.el("details", { class: "syncbox" }, [C.el("summary", {}, [C.el("span", { text: "Sinkron antar perangkat" })]), body]);
+    det.open = syncOpen;
+    det.addEventListener("toggle", function () { syncOpen = det.open; });
+    syncEl.append(det);
     syncEl.hidden = false;
   }
 
