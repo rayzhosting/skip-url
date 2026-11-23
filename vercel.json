@@ -7,6 +7,7 @@
       "source": "/(.*)",
       "headers": [
         { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Accept-CH", "value": "Sec-CH-UA-Model, Sec-CH-UA-Platform-Version" },
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
       ]
     }
