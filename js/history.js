@@ -50,7 +50,7 @@
       act.append(copy);
     }
     act.append(
-      C.el("a", { class: "ghost", href: "index.html?url=" + encodeURIComponent(item.url), text: "Bypass lagi" }),
+      C.el("a", { class: "ghost", href: "/?url=" + encodeURIComponent(item.url), text: "Bypass lagi" }),
       C.el("button", { class: "ghost", type: "button", text: "Hapus", onclick: function () {
         C.removeHistory(item.id); render();
       } })
@@ -73,7 +73,7 @@
       listEl.append(C.el("div", { class: "empty" }, [
         C.el("p", { text: "Riwayat masih kosong." }),
         C.el("p", { class: "note", text: "Link yang Anda bypass akan muncul di sini." }),
-        C.el("a", { class: "ghost solid", href: "index.html", text: "Bypass link pertama" })
+        C.el("a", { class: "ghost solid", href: "/", text: "Bypass link pertama" })
       ]));
       return;
     }

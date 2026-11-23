@@ -60,32 +60,42 @@
   /* ---------- Membaca respons API ---------- */
   // Kunci yang biasa berisi link hasil, urut dari yang paling spesifik.
   const URL_KEYS = ["bypassed_url", "bypassedUrl", "bypass_url", "bypassed", "bypass", "result_url", "result",
-    "destination_url", "destination", "final_url", "final", "target", "redirect", "link", "data", "url"];
+    "destination_url", "destination", "final_url", "final", "original", "linkGo", "linkgo", "target", "redirect", "link", "data", "url"];
   const TEXT_KEYS = ["result", "data", "content", "message"];
+  const SKIP_KEYS = /^(socialactions|social_actions|actions|steps|tasks)$/i;
 
-  // Cari link http(s). Kunci "original_*" dilewati karena itu link asal, bukan hasil.
-  function findUrl(obj, depth) {
-    if (obj == null || depth > 4) return "";
-    if (typeof obj === "string") return C.isHttp(obj) ? obj.trim() : "";
-    if (Array.isArray(obj)) {
-      for (let i = 0; i < obj.length; i++) { const r = findUrl(obj[i], depth + 1); if (r) return r; }
-      return "";
-    }
+  function hostOfUrl(u) { try { return new URL(u).hostname.replace(/^www\./, "").toLowerCase(); } catch (e) { return ""; } }
+  function normUrl(u) {
+    try { const x = new URL(u); return hostOfUrl(u) + x.pathname.replace(/\/+$/, "") + x.search; } catch (e) { return String(u || "").trim(); }
+  }
+  function rank(k) { const i = URL_KEYS.indexOf(k); return i === -1 ? URL_KEYS.length : i; }
+
+  // Kumpulkan semua link di respons beserta nama kunci dan kedalamannya.
+  function walk(obj, key, depth, out) {
+    if (obj == null || depth > 4) return;
+    if (typeof obj === "string") { if (C.isHttp(obj)) out.push({ k: key, u: obj.trim(), d: depth }); return; }
+    if (Array.isArray(obj)) { obj.forEach(function (v) { walk(v, key, depth + 1, out); }); return; }
     if (typeof obj === "object") {
-      for (let i = 0; i < URL_KEYS.length; i++) {
-        if (URL_KEYS[i] in obj) { const r = findUrl(obj[URL_KEYS[i]], depth + 1); if (r) return r; }
-      }
-      for (const k in obj) {
-        if (/^original/i.test(k)) continue;
-        const r = findUrl(obj[k], depth + 1);
-        if (r) return r;
-      }
+      Object.keys(obj).forEach(function (k) { if (!SKIP_KEYS.test(k)) walk(obj[k], k, depth + 1, out); });
     }
-    return "";
   }
 
-  function pickResult(obj) {
-    const u = findUrl(obj, 0);
+  // Pilih link tujuan: buang link asal yang dikirim pengguna, dahulukan link dengan domain berbeda
+  // dari link asal (tujuan sebenarnya, bukan halaman perantara di domain yang sama), lalu urutan kunci.
+  function findUrl(obj, input) {
+    const all = [];
+    walk(obj, "", 0, all);
+    const inN = normUrl(input), inH = hostOfUrl(input);
+    const cand = all.filter(function (c) { return normUrl(c.u) !== inN; });
+    cand.sort(function (a, b) {
+      const ah = hostOfUrl(a.u) !== inH ? 0 : 1, bh = hostOfUrl(b.u) !== inH ? 0 : 1;
+      return ah - bh || rank(a.k) - rank(b.k) || a.d - b.d;
+    });
+    return cand.length ? cand[0].u : "";
+  }
+
+  function pickResult(obj, input) {
+    const u = findUrl(obj, input);
     if (u) return u;
     // Tidak ada link: ambil teks hasil (misalnya isi paste atau kunci), bukan field seperti creator.
     if (obj && typeof obj === "object") {
@@ -108,7 +118,7 @@
     if (json && (json.success === false || json.status === false || json.error)) {
       throw Object.assign(new Error(json.message || json.error || "Layanan menolak link ini"), { raw: json });
     }
-    const picked = json ? pickResult(json) : text.trim();
+    const picked = json ? pickResult(json, target) : text.trim();
     if (!picked) throw Object.assign(new Error("Respons tidak berisi link tujuan"), { raw: json || text });
     return { picked: picked, raw: json || text, endpoint: endpoint, provider: res.headers.get("X-Provider") || "",
       ms: (json && typeof json.execution_time_ms === "number") ? json.execution_time_ms : null };
