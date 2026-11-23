@@ -143,7 +143,7 @@ const PROVIDERS = {
     keyFallbackEnv: "THERESAV_API_KEY", // key .com dipakai juga bila key .eu tidak diisi
     baseEnv: "THERESAVEU_BASE_URL",
     base: "https://api.theresav.eu/api/bypass/",
-    auth: { type: "query", name: "apikey" }, // .eu minta key lewat parameter ?apikey=, bukan header
+    auth: { type: "header", name: "x-apikey" }, // .eu minta key lewat header x-apikey (bukan x-api-key)
     map: THERESAV_MAP
   },
   theresav: {
