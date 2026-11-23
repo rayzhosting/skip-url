@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#050505">
+<title>Pemantauan - Skip URL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+.kpi{border:1px solid var(--line);background:#0b0b10;border-radius:16px;padding:14px 12px;text-align:center}
+.kpi b{display:block;font-size:22px;letter-spacing:-.02em;color:#fff}
+.kpi span{font-size:12px;color:var(--muted)}
+.ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0}
+.ctl label{font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.blockh{font-size:15px;margin:22px 0 8px;color:#fff}
+.tbl{width:100%;border-collapse:collapse;font-size:13.5px}
+.tbl td,.tbl th{padding:8px 4px;border-top:1px solid var(--line);text-align:left}
+.tbl th{font-weight:600;color:var(--muted);border-top:0;font-size:12px}
+.tbl td.n,.tbl th.n{text-align:right}
+.bar{height:6px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:4px}
+.bar i{display:block;height:100%;background:#3a6bff}
+.ev{padding:10px 0;border-top:1px solid var(--line);font-size:13.5px}
+.ev .r1{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.ev .tm{font-size:12px;color:var(--muted);white-space:nowrap}
+.ev .u{font-size:12px;color:var(--muted);word-break:break-all;margin-top:2px}
+.ev .e{font-size:12px;color:var(--bad);margin-top:2px;word-break:break-word}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;background:#35d07f}
+.dot.f{background:#ff6b5e}
+.login input{width:100%;border:1px solid var(--line);background:#14141a;border-radius:12px;padding:12px 14px;font-size:15px;color:#fff;outline:none;margin:10px 0}
+.login input:focus{border-color:#3a6bff}
+@media(max-width:420px){.kpis{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="top">
+    <a class="logo" href="index.html"><i><svg viewBox="0 0 24 24"><path d="M5 5l7 7-7 7"/><path d="M13 5l7 7-7 7"/></svg></i>Skip URL</a>
+  </div>
+
+  <header class="hero">
+    <h1 class="small">Pemantauan</h1>
+    <p class="sub">Ringkasan penggunaan semua pengunjung. Hanya bisa dibuka dengan kunci admin.</p>
+  </header>
+
+  <div class="card login" id="login">
+    <h2>Masuk</h2>
+    <input type="password" id="key" placeholder="Kunci admin" autocomplete="off" aria-label="Kunci admin">
+    <button class="ghost solid" id="enter" type="button">Masuk</button>
+    <p class="note" id="msg"></p>
+  </div>
+
+  <div id="dash" hidden>
+    <div class="ctl">
+      <select id="days" aria-label="Periode">
+        <option value="1">Hari ini</option>
+        <option value="7" selected>7 hari</option>
+        <option value="14">14 hari</option>
+        <option value="30">30 hari</option>
+      </select>
+      <button class="ghost" id="refresh" type="button">Segarkan</button>
+      <label><input type="checkbox" id="auto"> Otomatis 30 detik</label>
+      <button class="linkbtn" id="wipe" type="button" style="margin-left:auto">Hapus log</button>
+    </div>
+    <div class="kpis" id="kpis"></div>
+    <h3 class="blockh">Pengunjung (dari aktivitas terbaru)</h3><div id="byuser"></div>
+    <h3 class="blockh">Per layanan</h3><div id="bysvc"></div>
+    <h3 class="blockh">Per server (berhasil)</h3><div id="byprov"></div>
+    <h3 class="blockh">Per hari</h3><div id="byday"></div>
+    <h3 class="blockh">Aktivitas terbaru</h3>
+    <div class="tabs" role="group" aria-label="Filter">
+      <button type="button" data-f="all" aria-pressed="true">Semua</button>
+      <button type="button" data-f="ok" aria-pressed="false">Berhasil</button>
+      <button type="button" data-f="fail" aria-pressed="false">Gagal</button>
+    </div>
+    <div id="log"></div>
+    <p class="note">Angka dihitung per percobaan ke server. Satu link bisa memakai lebih dari satu percobaan jika layanan pertama gagal.</p>
+  </div>
+</main>
+<script src="js/services.js"></script>
+<script src="js/common.js"></script>
+<script src="js/monitor.js"></script>
+</body>
+</html>
