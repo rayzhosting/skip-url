@@ -157,6 +157,24 @@ module.exports = async function handler(req, res) {
   }
 
   const q = req.query || {};
+
+  // Cek konfigurasi: /api/skip?health=1 (hanya menampilkan ada/tidaknya key, bukan isinya)
+  if (q.health) {
+    const ord = providerOrder();
+    return send(res, 200, {
+      success: true,
+      order: ord,
+      providers: Object.keys(PROVIDERS).map(function (id) {
+        return {
+          id: id,
+          inOrder: ord.indexOf(id) !== -1,
+          keyEnv: PROVIDERS[id].keyEnv,
+          keySet: Boolean(process.env[PROVIDERS[id].keyEnv])
+        };
+      })
+    });
+  }
+
   const service = String(q.service || q.endpoint || "");
   const target = String(q.url || "");
 
