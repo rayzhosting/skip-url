@@ -9,14 +9,113 @@
   Environment variable (set di dashboard Vercel atau lewat `vercel env add`):
     THERESAV_API_KEY   key untuk api.theresav.com
     FGSI_API_KEY       key untuk fgsi.dpdns.org (opsional)
-    PROVIDER_ORDER     urutan provider, default "theresav,fgsi"
+    PROVIDER_ORDER     urutan provider, default "theresav,fgsi,bypassvip"
                        contoh hanya theresav: theresav
+    BYPASSVIP_BASE_URL opsional, ganti base URL Bypass.vip (provider ini tanpa API key)
     THERESAV_BASE_URL  opsional, ganti base URL Theresav
     FGSI_BASE_URL      opsional, ganti base URL FGSI
     ALLOWED_ORIGINS    opsional, origin tambahan dipisah koma
 
   Menambah provider baru: tambahkan satu objek di PROVIDERS di bawah.
 */
+
+const R = require("./_redis");
+
+const LOG_MAX = 1000;                     // jumlah log terbaru yang disimpan
+const STAT_TTL = 60 * 60 * 24 * 90;       // statistik harian disimpan 90 hari
+
+// ---- Info pengunjung untuk pemantauan pemilik ----
+// Nama perangkat TIDAK bisa didapat dari IP. IP hanya memberi perkiraan lokasi (header geo Vercel).
+// Model perangkat dibaca dari header User-Agent / Client Hints (Accept-CH di vercel.json).
+function parseDevice(h) {
+  const ua = String(h["user-agent"] || "");
+  const hint = function (n) { return String(h[n] || "").replace(/^"|"$/g, "").trim(); };
+  if (!ua) return "Tidak diketahui";
+  if (/bot|crawl|spider|curl|wget|python|node-fetch|axios|okhttp|postman|httpclient|go-http|java\//i.test(ua)) {
+    return "Skrip/bot (" + ua.slice(0, 40) + ")";
+  }
+  let dev = "", os = "", model = hint("sec-ch-ua-model");
+  if (/Android/i.test(ua)) {
+    os = "Android " + (hint("sec-ch-ua-platform-version") || (ua.match(/Android ([\d.]+)/) || [])[1] || "");
+    if (!model) {
+      const m = ua.match(/Android [\d.]+; ([^;)]+)/);
+      if (m && !/^(K|Mobile|wv|Android)$/i.test(m[1].trim())) model = m[1].replace(/\s*Build\/.*/, "").trim();
+    }
+    dev = model || "Android";
+  } else if (/iPhone|iPad|iPod/.test(ua)) {
+    dev = ua.match(/iPhone|iPad|iPod/)[0];
+    os = "iOS " + ((ua.match(/OS ([\d_]+)/) || [])[1] || "").replace(/_/g, ".");
+  } else if (/Windows NT/.test(ua)) { dev = "PC"; os = "Windows"; }
+  else if (/Mac OS X/.test(ua)) { dev = "Mac"; os = "macOS"; }
+  else if (/CrOS/.test(ua)) { dev = "Chromebook"; os = "ChromeOS"; }
+  else if (/Linux/.test(ua)) { dev = "PC"; os = "Linux"; }
+  let br = "";
+  // Urutan penting: Edge dan Opera juga mengandung kata "Chrome" di User-Agent-nya
+  const known = [["Edg", "Edge"], ["OPR", "Opera"], ["SamsungBrowser", "Samsung Internet"], ["FxiOS", "Firefox"], ["Firefox", "Firefox"], ["CriOS", "Chrome"], ["Chrome", "Chrome"]];
+  for (let i = 0; i < known.length && !br; i++) {
+    const m = ua.match(new RegExp(known[i][0] + "\\/(\\d+)"));
+    if (m) br = known[i][1] + " " + m[1];
+  }
+  if (!br && /Safari/.test(ua)) br = "Safari";
+  return [dev, os.trim(), br].filter(Boolean).join(" · ");
+}
+
+function clientInfo(req) {
+  const h = req.headers || {};
+  const ip = String(h["x-vercel-forwarded-for"] || h["x-forwarded-for"] || h["x-real-ip"] || "").split(",")[0].trim().slice(0, 64);
+  const dec = function (s) { try { return decodeURIComponent(s || ""); } catch (e) { return s || ""; } };
+  const g = [dec(h["x-vercel-ip-city"]), h["x-vercel-ip-country-region"], h["x-vercel-ip-country"]].filter(Boolean).join(", ");
+  return { ip: ip, g: g, d: parseDevice(h) };
+}
+
+// Ambil link hasil dari respons provider (untuk dicatat)
+function pickLink(text) {
+  const isUrl = function (s) { return typeof s === "string" && /^https?:\/\/\S+$/i.test(s.trim()); };
+  let obj;
+  try { obj = JSON.parse(text); } catch (e) { const t = String(text || "").trim(); return isUrl(t) ? t : ""; }
+  const KEYS = ["bypassed_url", "bypassedUrl", "bypass_url", "result", "destination", "final_url", "redirect", "link", "data", "url"];
+  function find(o, d) {
+    if (o == null || d > 4) return "";
+    if (typeof o === "string") return isUrl(o) ? o.trim() : "";
+    if (Array.isArray(o)) { for (let i = 0; i < o.length; i++) { const r = find(o[i], d + 1); if (r) return r; } return ""; }
+    if (typeof o === "object") {
+      for (let i = 0; i < KEYS.length; i++) { if (KEYS[i] in o) { const r = find(o[KEYS[i]], d + 1); if (r) return r; } }
+      for (const k in o) { if (/^original/i.test(k)) continue; const r = find(o[k], d + 1); if (r) return r; }
+    }
+    return "";
+  }
+  return find(obj, 0);
+}
+
+// Catat satu percobaan untuk pemantauan pemilik situs (lihat api/admin.js).
+// Dicatat: waktu, layanan, link asal dan hasil, hasil proses, server, durasi, IP + perkiraan lokasi, jenis perangkat.
+// Pengaturan di Vercel: LOG_URLS=0 (hanya host, tanpa link asal), LOG_RESULT=0 (tanpa link hasil), LOG_IP=0 (tanpa IP dan lokasi).
+async function logEvent(ev) {
+  if (!R.cfg()) return;
+  try {
+    const day = new Date(ev.t + 7 * 3600e3).toISOString().slice(0, 10); // hari WIB
+    const sk = "skip:stat:" + day;
+    const entry = { t: ev.t, s: ev.service, h: ev.host, ok: ev.ok, p: ev.provider || "", ms: ev.ms };
+    if (process.env.LOG_URLS !== "0") entry.u = ev.url.slice(0, 300);
+    if (ev.err) entry.e = String(ev.err).slice(0, 120);
+    if (ev.link && process.env.LOG_RESULT !== "0") entry.r = String(ev.link).slice(0, 300);
+    if (ev.who) {
+      if (ev.who.d) entry.d = ev.who.d;
+      if (process.env.LOG_IP !== "0") { if (ev.who.ip) entry.ip = ev.who.ip; if (ev.who.g) entry.g = ev.who.g; }
+    }
+    const cmds = [
+      ["LPUSH", "skip:log", JSON.stringify(entry)],
+      ["LTRIM", "skip:log", 0, LOG_MAX - 1],
+      ["HINCRBY", sk, "all", 1],
+      ["HINCRBY", sk, "s:" + ev.service, 1],
+      ["EXPIRE", sk, STAT_TTL]
+    ];
+    if (ev.ok) {
+      cmds.push(["HINCRBY", sk, "ok", 1], ["HINCRBY", sk, "so:" + ev.service, 1], ["HINCRBY", sk, "p:" + ev.provider, 1]);
+    }
+    await Promise.race([R.redis(cmds), new Promise(function (r) { setTimeout(r, 1500); })]);
+  } catch (e) { /* pencatatan tidak boleh mengganggu hasil */ }
+}
 
 const PROVIDERS = {
   theresav: {
@@ -56,8 +155,23 @@ const PROVIDERS = {
       sub4unlock: "sub4unlock",
       tpi: "adlinks"
     }
+  },
+  bypassvip: {
+    name: "Bypass.vip",
+    keyEnv: null, // tanpa API key (API gratis, jumlah request dibatasi)
+    baseEnv: "BYPASSVIP_BASE_URL",
+    base: "https://api.bypass.vip/",
+    auth: { type: "none" },
+    // satu endpoint untuk semua layanan; Bypass.vip mengenali link sendiri
+    map: {
+      linkvertise: "bypass", adlinks: "bypass", pastesites: "bypass", shorteners: "bypass",
+      socialunlocks: "bypass", sub2unlock: "bypass", sub4unlock: "bypass", universal: "bypass"
+    }
   }
 };
+
+function keyOf(p) { return p.keyEnv ? process.env[p.keyEnv] : ""; }
+function isReady(p) { return !p.keyEnv || Boolean(process.env[p.keyEnv]); }
 
 const ATTEMPT_TIMEOUT_MS = 10000; // batas waktu per percobaan
 const TOTAL_BUDGET_MS = 27000;    // batas total (maxDuration fungsi = 30 detik)
@@ -81,7 +195,7 @@ function originAllowed(req) {
 }
 
 function providerOrder() {
-  const raw = process.env.PROVIDER_ORDER || "theresav,fgsi";
+  const raw = process.env.PROVIDER_ORDER || "theresav,fgsi,bypassvip";
   const seen = {};
   return raw.split(",").map(function (s) { return s.trim().toLowerCase(); })
     .filter(function (id) {
@@ -102,6 +216,9 @@ function buildRequest(p, remote, target, key) {
   let base = process.env[p.baseEnv] || p.base;
   if (base.slice(-1) !== "/") base += "/";
   const u = base + encodeURIComponent(remote) + "?";
+  if (p.auth.type === "none") {
+    return { url: u + "url=" + encodeURIComponent(target), headers: { Accept: "application/json, text/plain, */*" } };
+  }
   if (p.auth.type === "header") {
     const headers = { Accept: "application/json, text/plain, */*" };
     headers[p.auth.name] = key;
@@ -136,6 +253,7 @@ async function attempt(p, remote, target, key, timeoutMs) {
     try { json = JSON.parse(text); } catch (e) {}
     if (json && typeof json === "object" &&
         (json.success === false || json.status === false || json.ok === false ||
+         (typeof json.status === "string" && /^(fail|error)/i.test(json.status)) ||
          (typeof json.error === "string" && json.error))) {
       return { ok: false, status: r.status, message: String(json.message || json.error || "Layanan menolak link").slice(0, 160) };
     }
@@ -169,7 +287,7 @@ module.exports = async function handler(req, res) {
           id: id,
           inOrder: ord.indexOf(id) !== -1,
           keyEnv: PROVIDERS[id].keyEnv,
-          keySet: Boolean(process.env[PROVIDERS[id].keyEnv])
+          keySet: isReady(PROVIDERS[id])
         };
       })
     });
@@ -187,13 +305,14 @@ module.exports = async function handler(req, res) {
     return send(res, 400, { success: false, message: "URL tidak valid" });
   }
 
+  const who = clientInfo(req);
   const order = providerOrder();
-  const configured = order.filter(function (id) { return process.env[PROVIDERS[id].keyEnv]; });
+  const configured = order.filter(function (id) { return isReady(PROVIDERS[id]); });
   if (!configured.length) {
     return send(res, 500, {
       success: false,
       message: "Belum ada API key yang diatur di server (" +
-        order.map(function (id) { return PROVIDERS[id].keyEnv; }).join(" / ") + ")"
+        order.map(function (id) { return PROVIDERS[id].keyEnv; }).filter(Boolean).join(" / ") + ")"
     });
   }
 
@@ -209,16 +328,18 @@ module.exports = async function handler(req, res) {
       attempts.push({ provider: p.name, message: "Layanan ini tidak ada di provider ini" });
       continue;
     }
-    const key = process.env[p.keyEnv];
+    const key = keyOf(p);
 
     for (let j = 0; j < remotes.length; j++) {
       const left = TOTAL_BUDGET_MS - (Date.now() - started);
       if (left < 1500) {
         attempts.push({ provider: p.name, endpoint: remotes[j], message: "Waktu habis" });
+        await logEvent({ t: Date.now(), who: who, service: service, host: parsed.hostname.replace(/^www\./, ""), url: target, ok: false, ms: Date.now() - started, err: "Waktu habis" });
         return send(res, 504, { success: false, message: "Semua provider terlalu lama merespons", attempts: attempts });
       }
       const r = await attempt(p, remotes[j], target, key, Math.min(ATTEMPT_TIMEOUT_MS, left));
       if (r.ok) {
+        await logEvent({ t: Date.now(), who: who, service: service, host: parsed.hostname.replace(/^www\./, ""), url: target, ok: true, link: pickLink(r.text), provider: p.name, ms: Date.now() - started });
         res.statusCode = 200;
         res.setHeader("Cache-Control", "no-store");
         res.setHeader("Content-Type", r.type);
@@ -231,6 +352,8 @@ module.exports = async function handler(req, res) {
     }
   }
 
+  await logEvent({ t: Date.now(), who: who, service: service, host: parsed.hostname.replace(/^www\./, ""), url: target, ok: false, ms: Date.now() - started,
+    err: attempts.map(function (a) { return a.provider + ": " + a.message; }).join("; ") });
   return send(res, 502, {
     success: false,
     message: "Semua provider gagal memproses link ini",
