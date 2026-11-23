@@ -340,8 +340,12 @@
     fetch(CFG.PROXY_URL + "?health=1", { signal: AbortSignal.timeout(6000) })
       .then(function (r) { return r.json(); })
       .then(function (j) {
-        const n = (j.providers || []).filter(function (p) { return p.inOrder && p.keySet; }).length;
-        set(n ? "ok" : "warn", n ? "Operasional (" + n + " server)" : "Server belum dikonfigurasi");
+        // api/skip.js versi lama tidak punya ?health=1, jadi tidak ada daftar provider
+        if (!j || !Array.isArray(j.providers)) { set("warn", "Status tidak tersedia, perbarui api/skip.js"); return; }
+        const act = j.providers.filter(function (p) { return p.inOrder; });
+        const n = act.filter(function (p) { return p.keySet; }).length;
+        if (n) { set("ok", "Operasional (" + n + " server)"); return; }
+        set("warn", "Key belum terbaca: " + (act.map(function (p) { return p.keyEnv; }).join(", ") || "PROVIDER_ORDER kosong"));
       })
       .catch(function () { set("bad", "Server tidak terjangkau"); });
   })();
