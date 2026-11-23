@@ -331,3 +331,30 @@ html.lenis,html.lenis body{height:auto}
 .lenis.lenis-smooth [data-lenis-prevent]{overscroll-behavior:contain}
 .lenis.lenis-stopped{overflow:hidden}
 .lenis.lenis-smooth iframe{pointer-events:none}
+
+/* ===== Riwayat dan kartu sinkron lebih ringkas, tanpa elemen terpotong ===== */
+.box,.search .box{min-width:0}
+.box input{width:100%}
+.search input[type=search]{font-size:15px;padding:12px 4px}
+.hero:not(.center) .sub{font-size:14.5px}
+h1.small{font-size:clamp(26px,6vw,32px)}
+.meta{font-size:13px}
+.tabs button{font-size:13px;padding:6px 14px}
+.sync{padding:2px 16px;margin-bottom:4px}
+.syncbox{border-bottom:0}
+.sync summary{padding:12px 0;font-size:15px}
+.sync-body .note{font-size:13px;margin:0 0 10px}
+.sync-form{display:flex;flex-direction:column;gap:8px;margin:12px 0 4px}
+.sync-form input{width:100%;border:1px solid var(--line);background:#14141a;border-radius:12px;padding:11px 13px;font-size:14px;color:#fff;outline:none}
+.sync-form input:focus{border-color:#3a6bff}
+.sync-form .ghost{width:100%;text-align:center}
+.h-item{padding:14px 16px;border-radius:20px;margin-top:10px}
+.h-head{margin-bottom:8px}
+.h-head .chip{font-size:12px;padding:2px 10px 2px 9px}
+.when{font-size:12px}
+.h-line{margin-top:6px;gap:10px}
+.h-label{width:46px;font-size:12px}
+.h-text{font-size:13.5px}
+.h-text.muted{font-size:12.5px}
+.h-item .actions{margin-top:12px;gap:6px}
+.h-item .ghost{font-size:13px;padding:7px 12px;border-radius:10px}
