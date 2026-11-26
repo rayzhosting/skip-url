@@ -197,8 +197,8 @@ function keyOf(p) { return (p.keyEnv && process.env[p.keyEnv]) || (p.keyEnvAlt &
 function isReady(p) { return !p.keyEnv || Boolean(keyOf(p)); }
 
 // Sebagian layanan lambat (mis. bicolink bisa ±10 detik), jadi batasnya longgar.
-const ATTEMPT_TIMEOUT_MS = 25000; // batas waktu per percobaan
-const TOTAL_BUDGET_MS = 55000;    // batas total (maxDuration fungsi = 60 detik di vercel.json)
+const ATTEMPT_TIMEOUT_MS = 250000; // batas waktu per percobaan
+const TOTAL_BUDGET_MS = 550000;    // batas total (maxDuration fungsi = 60 detik di vercel.json)
 
 function send(res, status, body) {
   res.statusCode = status;
