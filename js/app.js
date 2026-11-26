@@ -316,7 +316,7 @@
         sub.textContent = finished + " dari " + list.length + " selesai";
       }
     }
-    await Promise.all([worker(), worker()]);
+    await worker();
 
     fx(results.length ? "success" : "error"); pulse(results.length ? "flash" : "shake");
     sub.textContent = results.length + " berhasil dari " + list.length + " link";
