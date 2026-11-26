@@ -146,11 +146,11 @@ const PROVIDERS = {
     map: THERESAV_MAP
   },
   // Provider terpisah untuk alamat .eu (aktif jika "theresav_eu" ada di PROVIDER_ORDER)
-  theresav_eu: {
+  theresaveu: {
     name: "Theresav EU",
-    keyEnv: "THERESAV_EU_API_KEY",
+    keyEnv: "THERESAVEU_API_KEY",
     keyEnvAlt: "THERESAV_API_KEY", // bila key khusus .eu kosong, pakai key Theresav utama
-    baseEnv: "THERESAV_EU_BASE_URL",
+    baseEnv: "THERESAVEU_BASE_URL",
     base: "https://api.theresav.eu/api/bypass/",
     auth: { type: "header", name: "x-api-key" },
     map: THERESAV_MAP
