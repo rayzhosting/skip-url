@@ -8,13 +8,13 @@
 
   Environment variable (set di dashboard Vercel atau lewat `vercel env add`):
     THERESAV_API_KEY   key untuk api.theresav.com
-    THERESAVEU_API_KEY key untuk api.theresav.eu (opsional, kalau kosong memakai THERESAV_API_KEY)
     FGSI_API_KEY       key untuk fgsi.dpdns.org (opsional)
-    PROVIDER_ORDER     urutan provider, default "theresaveu,theresav,fgsi,bypassvip"
+    PROVIDER_ORDER     urutan provider, default "theresav,fgsi,bypassvip"
                        contoh hanya theresav: theresav
-    THERESAVEU_BASE_URL opsional, ganti base URL Theresav .eu
     BYPASSVIP_BASE_URL opsional, ganti base URL Bypass.vip (provider ini tanpa API key)
-    THERESAV_BASE_URL  opsional, ganti base URL Theresav
+    THERESAV_BASE_URL  opsional, ganti alamat Theresav; boleh beberapa dipisah koma (dicoba berurutan).
+                       Jangan diisi jika ingin memakai bawaan: api.theresav.com lalu mirror api.theresav.eu
+    THERESAV_EU_API_KEY opsional, key khusus api.theresav.eu jika berbeda dari THERESAV_API_KEY
     FGSI_BASE_URL      opsional, ganti base URL FGSI
     ALLOWED_ORIGINS    opsional, origin tambahan dipisah koma
 
@@ -128,31 +128,23 @@ async function logEvent(ev) {
   } catch (e) { /* pencatatan tidak boleh mengganggu hasil */ }
 }
 
-// id layanan Theresav (nama endpoint sama dengan id); dipakai .com dan .eu
-const THERESAV_MAP = [
-  "adlinksumo", "adsafe", "bicolink", "biplab", "cutwin", "delta", "droplink",
-  "earnlinks", "izen", "linkpays", "linkpoi", "linkvertise", "moneyblink",
-  "move2link", "ouo", "sfl", "sub2unlock", "sub4unlock", "vplink", "pndk",
-  "shrinkme", "tpi", "universal"
-].reduce(function (m, k) { m[k] = k; return m; }, {});
-
 const PROVIDERS = {
-  theresaveu: {
-    name: "Theresav EU",
-    keyEnv: "THERESAVEU_API_KEY",
-    keyFallbackEnv: "THERESAV_API_KEY", // key .com dipakai juga bila key .eu tidak diisi
-    baseEnv: "THERESAVEU_BASE_URL",
-    base: "https://api.theresav.eu/api/bypass/",
-    auth: { type: "header", name: "x-apikey" }, // .eu minta key lewat header x-apikey (bukan x-api-key)
-    map: THERESAV_MAP
-  },
   theresav: {
     name: "Theresav",
     keyEnv: "THERESAV_API_KEY",
+    keyEnvAlt: "THERESAV_EU_API_KEY", // dipakai untuk alamat .eu bila diisi
     baseEnv: "THERESAV_BASE_URL",
     base: "https://api.theresav.com/api/bypass/",
+    // Alamat cadangan (mirror): jika .com error, otomatis coba .eu. Key yang sama dipakai di semuanya.
+    bases: ["https://api.theresav.com/api/bypass/", "https://api.theresav.eu/api/bypass/"],
     auth: { type: "header", name: "x-api-key" },
-    map: THERESAV_MAP
+    // id layanan -> nama endpoint di provider (nama sama)
+    map: [
+      "adlinksumo", "adsafe", "bicolink", "biplab", "cutwin", "delta", "droplink",
+      "earnlinks", "izen", "linkpays", "linkpoi", "linkvertise", "moneyblink",
+      "move2link", "ouo", "sfl", "sub2unlock", "sub4unlock", "vplink", "pndk",
+      "shrinkme", "tpi", "universal"
+    ].reduce(function (m, k) { m[k] = k; return m; }, {})
   },
   fgsi: {
     name: "FGSI",
@@ -192,14 +184,18 @@ const PROVIDERS = {
   }
 };
 
-function keyOf(p) {
-  if (!p.keyEnv) return "";
-  return process.env[p.keyEnv] || (p.keyFallbackEnv ? process.env[p.keyFallbackEnv] : "") || "";
+function keyOf(p) { return p.keyEnv ? process.env[p.keyEnv] : ""; }
+function altOf(p) { return p.keyEnvAlt ? process.env[p.keyEnvAlt] : ""; }
+function isReady(p) { return !p.keyEnv || Boolean(process.env[p.keyEnv] || altOf(p)); }
+// Key untuk satu alamat: alamat .eu memakai key khusus jika ada, selain itu key utama (atau key .eu bila key utama kosong)
+function keyFor(p, base) {
+  try { if (altOf(p) && new URL(base).hostname.endsWith(".eu")) return altOf(p); } catch (e) {}
+  return keyOf(p) || altOf(p) || "";
 }
-function isReady(p) { return !p.keyEnv || Boolean(keyOf(p)); }
 
-const ATTEMPT_TIMEOUT_MS = 10000; // batas waktu per percobaan
-const TOTAL_BUDGET_MS = 27000;    // batas total (maxDuration fungsi = 30 detik)
+// Sebagian layanan lambat (mis. bicolink bisa ±10 detik), jadi batasnya longgar.
+const ATTEMPT_TIMEOUT_MS = 25000; // batas waktu per percobaan
+const TOTAL_BUDGET_MS = 55000;    // batas total (maxDuration fungsi = 60 detik di vercel.json)
 
 function send(res, status, body) {
   res.statusCode = status;
@@ -220,7 +216,7 @@ function originAllowed(req) {
 }
 
 function providerOrder() {
-  const raw = process.env.PROVIDER_ORDER || "theresaveu,theresav,fgsi,bypassvip";
+  const raw = process.env.PROVIDER_ORDER || "theresav,fgsi,bypassvip";
   const seen = {};
   return raw.split(",").map(function (s) { return s.trim().toLowerCase(); })
     .filter(function (id) {
@@ -237,8 +233,25 @@ function allServices() {
   return set;
 }
 
-function buildRequest(p, remote, target, key) {
-  let base = process.env[p.baseEnv] || p.base;
+// Beberapa alamat (mirror) per provider dicoba berurutan; alamat yang baru gagal diturunkan 60 detik.
+const baseDown = {};
+function basesOf(p) {
+  const env = process.env[p.baseEnv];
+  const list = env ? env.split(",") : (p.bases || [p.base]);
+  return list.map(function (x) { return x.trim(); }).filter(Boolean).map(function (b) { return b.slice(-1) === "/" ? b : b + "/"; });
+}
+function orderedBases(p) {
+  const all = basesOf(p), now = Date.now();
+  return all.filter(function (b) { return !(baseDown[b] > now); }).concat(all.filter(function (b) { return baseDown[b] > now; }));
+}
+// Gagal karena server/jaringan/akses (bukan karena link-nya): layak dicoba di alamat cadangan.
+function retryable(r) { return r.status === 0 || r.status >= 500 || r.status === 429 || r.status === 401 || r.status === 403; }
+// Timeout bisa berarti layanannya yang lambat, bukan alamatnya yang mati, jadi tidak ikut diturunkan.
+function markBase(b, r) { if (r.ok) delete baseDown[b]; else if (retryable(r) && !r.timeout) baseDown[b] = Date.now() + 60000; }
+function baseHost(b) { try { return new URL(b).host; } catch (e) { return b; } }
+
+function buildRequest(p, remote, target, key, baseUrl) {
+  let base = baseUrl;
   if (base.slice(-1) !== "/") base += "/";
   const u = base + encodeURIComponent(remote) + "?";
   if (p.auth.type === "none") {
@@ -260,8 +273,8 @@ function snippet(text) {
 }
 
 // Satu percobaan ke satu endpoint satu provider.
-async function attempt(p, remote, target, key, timeoutMs) {
-  const rq = buildRequest(p, remote, target, key);
+async function attempt(p, remote, target, key, timeoutMs, baseUrl) {
+  const rq = buildRequest(p, remote, target, key, baseUrl);
   const ctrl = new AbortController();
   const timer = setTimeout(function () { ctrl.abort(); }, timeoutMs);
   try {
@@ -284,7 +297,8 @@ async function attempt(p, remote, target, key, timeoutMs) {
     }
     return { ok: true, status: r.status, text: text, type: type };
   } catch (e) {
-    return { ok: false, status: 0, message: e && e.name === "AbortError" ? "Timeout" : "Tidak bisa terhubung" };
+    const timeout = Boolean(e && e.name === "AbortError");
+    return { ok: false, status: 0, timeout: timeout, message: timeout ? "Timeout" : "Tidak bisa terhubung" };
   } finally {
     clearTimeout(timer);
   }
@@ -312,7 +326,8 @@ module.exports = async function handler(req, res) {
           id: id,
           inOrder: ord.indexOf(id) !== -1,
           keyEnv: PROVIDERS[id].keyEnv,
-          keySet: isReady(PROVIDERS[id])
+          keySet: isReady(PROVIDERS[id]),
+          bases: basesOf(PROVIDERS[id]).map(baseHost)
         };
       })
     });
@@ -362,9 +377,19 @@ module.exports = async function handler(req, res) {
         await logEvent({ t: Date.now(), who: who, service: service, host: parsed.hostname.replace(/^www\./, ""), url: target, ok: false, ms: Date.now() - started, err: "Waktu habis" });
         return send(res, 504, { success: false, message: "Semua provider terlalu lama merespons", attempts: attempts });
       }
-      const r = await attempt(p, remotes[j], target, key, Math.min(ATTEMPT_TIMEOUT_MS, left));
+      const bases = orderedBases(p);
+      let r = null;
+      for (let b = 0; b < bases.length; b++) {
+        const left2 = TOTAL_BUDGET_MS - (Date.now() - started);
+        if (b > 0 && left2 < 1500) break;
+        r = await attempt(p, remotes[j], target, keyFor(p, bases[b]), Math.min(ATTEMPT_TIMEOUT_MS, left2), bases[b]);
+        markBase(bases[b], r);
+        if (r && r.ok) { r.base = bases[b]; break; }
+        attempts.push({ provider: p.name, endpoint: remotes[j], status: r.status, message: (bases.length > 1 ? baseHost(bases[b]) + ": " : "") + r.message });
+        if (!retryable(r)) break;
+      }
       if (r.ok) {
-        await logEvent({ t: Date.now(), who: who, service: service, host: parsed.hostname.replace(/^www\./, ""), url: target, ok: true, link: pickLink(r.text, target), provider: p.name, ms: Date.now() - started });
+        await logEvent({ t: Date.now(), who: who, service: service, host: parsed.hostname.replace(/^www\./, ""), url: target, ok: true, link: pickLink(r.text, target), provider: p.name + (bases.length > 1 ? " (" + baseHost(r.base).split(".").pop() + ")" : ""), ms: Date.now() - started });
         res.statusCode = 200;
         res.setHeader("Cache-Control", "no-store");
         res.setHeader("Content-Type", r.type);
@@ -373,7 +398,6 @@ module.exports = async function handler(req, res) {
         res.setHeader("Access-Control-Expose-Headers", "X-Provider, X-Remote-Endpoint");
         return res.end(r.text);
       }
-      attempts.push({ provider: p.name, endpoint: remotes[j], status: r.status, message: r.message });
     }
   }
 
