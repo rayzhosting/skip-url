@@ -152,7 +152,7 @@ const PROVIDERS = {
     keyEnvAlt: "THERESAV_API_KEY", // bila key khusus .eu kosong, pakai key Theresav utama
     baseEnv: "THERESAVEU_BASE_URL",
     base: "https://api.theresav.eu/api/bypass/",
-    auth: { type: "header", name: "x-api-key" },
+    auth: { type: "header", name: "x-apikey" },
     map: THERESAV_MAP
   },
   fgsi: {
